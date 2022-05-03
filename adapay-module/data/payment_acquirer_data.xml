@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="payment_acquirer_adapay" model="payment.acquirer">
+            <field name="name">Ada Pay</field>
+            <field name="image_128" type="base64" file="ada-payment-module/static/src/img/pay-with-ada.png"/>
+            <field name="provider">adapay</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="view_template_id" ref="adapay_form"/>
+            <field name="payment_icon_ids" eval='[(6, 0, [ref("ada-payment-module.payment_icon_adapay")])]'/>
+            <field name="description" type="html">
+                <p>
+                    Accept ADA payments.<br/>
+                    Direct. Secure. From Anywhere. For Everyone.
+                </p>
+                <a href="https://adapay.finance/" target="_blank">AdaPay Website</a>
+                <ul class="list-inline">
+                    <li class="list-inline-item"><i class="fa fa-check"/>Online Payment</li>
+                    <li class="list-inline-item"><i class="fa fa-check"/>Payment Status Tracking</li>
+                </ul>
+            </field>
+        </record>
+
+    </data>
+</odoo>

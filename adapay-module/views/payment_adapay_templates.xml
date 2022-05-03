@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data> <!--TODO: set noupdate="1"-->
+        <template id="adapay_form">
+            <input type="hidden" name="data_set" t-att-data-action-url="tx_url" data-remove-me=""/>
+            <!-- seller -->
+            <input type="hidden" name='reference' t-att-value='reference'/>
+            <!-- cart -->
+            <input type="hidden" name='amount' t-att-value='amount'/>
+            <input type="hidden" name='currency_id' t-att-value='currency.id'/>
+            <input type="hidden" name='currency' t-att-value='currency.name'/>
+            <input type="hidden" name='currency_code' t-att-value='currency.display_name'/>
+            <!-- buyer -->
+            <input type="hidden" name='partner_id' t-att-value='partner_id'/>
+            <input type="hidden" name='partner_email' t-att-value='partner_email'/>
+            <input type="hidden" name='partner_lang' t-att-value='partner_lang'/>
+            <!-- conversion amount -->
+            <input type="hidden" name='ada_amount' t-att-value='ada_amount'/>
+            <input type="hidden" name='last_updated' t-att-value='last_updated'/>
+            <input type="hidden" name='ada_currency' t-att-value='ada_currency'/>
+            <!-- AdaPay payment-request -->
+            <input type="hidden" name='adapay_uuid' t-att-value='adapay_uuid'/>
+            <input type="hidden" name='adapay_amount' t-att-value='adapay_amount'/>
+            <input type="hidden" name='adapay_total_amount_sent' t-att-value='adapay_confirmedAmount'/>
+            <input type="hidden" name='adapay_total_amount_left' t-att-value='adapay_pendingAmount'/>
+            <input type="hidden" name='adapay_expiration_date' t-att-value='adapay_expirationDate'/>
+            <input type="hidden" name='adapay_update_time' t-att-value='adapay_updateTime'/>
+            <input type="hidden" name='adapay_last_updated' t-att-value='adapay_updateTime'/>
+            <input type="hidden" name='adapay_status' t-att-value='adapay_status'/>
+            <input type="hidden" name='adapay_address' t-att-value='adapay_address'/>
+
+            <!-- before payment verification -->
+            <!-- after payment parameters -->
+            <!-- redirection -->
+        </template>
+
+        <template id="payment_adapay_page" name="Adapay processing page">
+            <div class="payment-card-component">
+                <div class="payment-card-component__container--body">
+                    <p class="payment-page-component__container--title"><t t-esc="title"/></p>
+                    <div class="payment-page-component__container--card-container">
+                        <div class="card-component payment-page-component__container--card pending">
+                            <t t-if="adapay_status=='new'">
+                                <div class="payment-qr-component">
+                                    <div class="payment-qr-component__container">
+                                        <div class="payment-qr-component__container--header">
+                                            <div class="payment-qr-component__container--header-total"><t t-esc="adapay_amount"/> ADA</div>
+                                            <div class="countdown-timer-component">
+                                                <div class="countdown-timer-component__inner">
+                                                    <p><t t-esc="adapay_expiration_minutes"/>:00</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="payment-qr" height="200" width="200" style="height: 200px; width: 200px;">
+                                            <img t-att-src="qr_code" style="height: 200px; width: 200px;"/>
+                                        </div>
+                                        <div class="payment-qr-component__container--address">
+                                            <div class="sc-htpNat NLjfq">
+                                                <p>Address</p>
+                                                <div><t t-esc="adapay_address"/></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                            <div class="payment-history-component">
+                                <div class="payment-history-component--row">
+                                    <h2 class="payment-history-component--row-title">Total amount sent</h2>
+                                    <b class="payment-history-component--row-amount"><t t-esc="adapay_total_amount_sent"/> ADA</b>
+                                </div>
+                                <div class="payment-history-component--row">
+                                    <h2 class="payment-history-component--row-title">Amount left to pay</h2>
+                                    <b class="payment-history-component--row-amount"><t t-esc="adapay_total_amount_left"/> ADA</b>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </data>
+</odoo>
