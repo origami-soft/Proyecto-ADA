@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <template id="assets_frontend_adapat" inherit_id="web.assets_frontend">
-        <xpath expr="link[last()]" position="after">
-            <link rel="stylesheet" type="text/css" href="/ada-payment-module/static/src/css/adapay_payment.css"/>
-        </xpath>
-    </template>
-</odoo>
