@@ -36,6 +36,6 @@ class AdapayController(PaymentProcessing):
     @http.route('/payment/adapay/payment-events', type='json', auth='public', csrf=False)
     def adapay_webhook(self, **kwargs):
         data = json.loads(request.httprequest.data)
-        if data.get("event") == "paymentRequestUpdate":
+        if request.env.ref("ada-payment-module.payment_acquirer_adapay").adapay_use_webhook:
             request.env['payment.transaction'].sudo()._handle_adapay_webhook(data)
-        return 'OK'
+            return 'OK'

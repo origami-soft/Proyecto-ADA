@@ -14,6 +14,7 @@
         'views/payment_adapay_templates.xml',
         'views/assets.xml',
         'data/payment_acquirer_data.xml',
+        'views/adapay_payment_update_cron.xml',
     ],
     'installable': True,
     'application': True,

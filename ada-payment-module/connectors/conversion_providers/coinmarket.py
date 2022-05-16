@@ -40,8 +40,13 @@ class CoinMarketConversion:
     def _get_url(self, url_path):
         return urljoin(self.base_url, url_path)
 
-    def price_conversion(self, amount_id, convert_id, amount):
+    def _get_currency_id_from_name(self, currency_name):
+        return getattr(CoinMarket, currency_name).value
+
+    def price_conversion(self, amount_currency, convert_currency, amount):
         price_conversion_url = self._get_url(CoinMarket.price_convertion.value)
+        amount_id = self._get_currency_id_from_name(amount_currency)
+        convert_id = self._get_currency_id_from_name(convert_currency)
         params =  {
             "amount": amount,
             "id": amount_id,
@@ -56,5 +61,7 @@ class CoinMarketConversion:
 
 def get_coinmarket(api_key=None, sandbox=False):
     url = CoinMarket.url_sandbox.value if sandbox else CoinMarket.url_production.value
-    api_key = CoinMarket.sandbox_api_key.value if sandbox else api_key
+    if not api_key and sandbox:
+        # Use default `api_key` for CoinMaket
+        api_key = CoinMarket.sandbox_api_key.value
     return CoinMarketConversion(url, api_key, sandbox)

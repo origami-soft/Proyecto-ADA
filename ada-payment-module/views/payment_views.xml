@@ -10,6 +10,7 @@
                     <group attrs="{'invisible': [('provider', '!=', 'adapay')]}">
                         <field name="adapay_api_key" required="1"/>
                         <field name="adapay_expiration_minutes" required="1"/>
+                        <field name="adapay_use_webhook" required="1"/>
                         <a colspan="2" href="https://docs.adapay.finance/docs/introduction/getting-started" target="_blank">Configure Ada Pay payment</a>
                     </group>
                 </xpath>
