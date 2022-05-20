@@ -4,6 +4,15 @@ from datetime import date
 from urllib.parse import urljoin 
 from requests import Session
 
+RATE = 1000000
+
+def lovelace_to_ada(amount):
+    return float(amount)/RATE
+
+
+def ada_to_lovelace(amount):
+    return int(amount)*RATE
+
 
 class AdaPayUrl(Enum):
     # Urls
@@ -67,7 +76,7 @@ class AdaPayMerchantApi:
             requests.exceptions.HTTPError: If we made a bad request (a 4XX client error or 5XX server error response).
         """
         data = {
-            "amount": amount, "paymentRequestExpirationTime": expiration_minutes, "receiptEmail": receipt_email,
+            "amount": ada_to_lovelace(amount), "paymentRequestExpirationTime": expiration_minutes, "receiptEmail": receipt_email,
             "description": description, "name": name, "orderId": order_id, "returnUrl": return_url, "addressForRefund": address_for_refund,
         }
         payment_request_url = self._get_url(AdaPayUrl.create_payment_request.value)

@@ -26,6 +26,7 @@
             <input type="hidden" name='adapay_expiration_date' t-att-value='adapay_expirationDate'/>
             <input type="hidden" name='adapay_update_time' t-att-value='adapay_updateTime'/>
             <input type="hidden" name='adapay_last_updated' t-att-value='adapay_updateTime'/>
+            <input type="hidden" name='adapay_expiration_minutes' t-att-value='adapay_expiration_minutes'/>
             <input type="hidden" name='adapay_status' t-att-value='adapay_status'/>
             <input type="hidden" name='adapay_address' t-att-value='adapay_address'/>
 
@@ -40,38 +41,70 @@
                     <p class="payment-page-component__container--title"><t t-esc="title"/></p>
                     <div class="payment-page-component__container--card-container">
                         <div class="card-component payment-page-component__container--card pending">
-                            <t t-if="adapay_status=='new'">
                                 <div class="payment-qr-component">
                                     <div class="payment-qr-component__container">
                                         <div class="payment-qr-component__container--header">
                                             <div class="payment-qr-component__container--header-total"><t t-esc="adapay_amount"/> ADA</div>
-                                            <div class="countdown-timer-component">
-                                                <div class="countdown-timer-component__inner">
-                                                    <p><t t-esc="adapay_expiration_minutes"/>:00</p>
+                                            <t t-if="adapay_status=='new'">
+                                                <div class="countdown-timer-component">
+                                                    <div class="countdown-timer-component__inner">
+                                                        <p id="expiration_clock"></p>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    
+                                        <t t-if="adapay_status=='new'">
+                                            <div class="payment-qr" height="200" width="200" style="height: 200px; width: 200px;">
+                                                <img t-att-src="qr_code" style="height: 200px; width: 200px;"/>
+                                            </div>
+                                            <div class="payment-qr-component__container--address">
+                                                <div class="payment-address-component">
+                                                    <div class="payment-address--title">Address</div>
+                                                    <div content-editable="true" class="payment-address">
+                                                        <t t-esc="adapay_address"/>
+                                                        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAYAAAAmlE46AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAALBJREFUeNpidHdzY0ACxUDcDsSsDLjBfyCew4ImmAnEsUC8E49GaSC+DNOoD8SCQHwFiJmA2ABN8VMgvo3EZwRpnAHEwVBJECjHYosSENcDcT9MAKQxBYg1gPgOHuf5A3EHskaQs5iB+A0DfvARiDmRBZgYyASjGrEDFjhBAtgMxNpAfIZUjbVAzAvEZ0EavwKxBRCfwKPBEIjfAvEFZPfmA/EqqEm4wHMgjkMWAAgwANM3GpISwCz8AAAAAElFTkSuQmCC" alt="copy"/>
+                                                    </div>
+                                                    
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="payment-qr" height="200" width="200" style="height: 200px; width: 200px;">
-                                            <img t-att-src="qr_code" style="height: 200px; width: 200px;"/>
-                                        </div>
-                                        <div class="payment-qr-component__container--address">
-                                            <div class="sc-htpNat NLjfq">
-                                                <p>Address</p>
-                                                <div><t t-esc="adapay_address"/></div>
-                                            </div>
-                                        </div>
+                                        </t>
                                     </div>
                                 </div>
-                            </t>
                             <div class="payment-history-component">
                                 <div class="payment-history-component--row">
-                                    <h2 class="payment-history-component--row-title">Total amount sent</h2>
+                                    <h2 class="payment-history-component--row-title">Total amount confirmed</h2>
                                     <b class="payment-history-component--row-amount"><t t-esc="adapay_total_amount_sent"/> ADA</b>
                                 </div>
                                 <div class="payment-history-component--row">
-                                    <h2 class="payment-history-component--row-title">Amount left to pay</h2>
+                                    <h2 class="payment-history-component--row-title">Amount left to confirm</h2>
                                     <b class="payment-history-component--row-amount"><t t-esc="adapay_total_amount_left"/> ADA</b>
                                 </div>
+                                <t t-if="adapay_transaction_history">
+                                    <b> Transactions history</b>
+                                    <t t-foreach="adapay_transaction_history" t-as="ada_tx_history">
+                                        <div class="payment-transaction-history--row">
+                                            <div class="row " style="font-size: small">
+                                                <div class="col col-6">
+                                                    <t t-esc="ada_tx_history['lastMonitoredDepth']" /> of 15 confirmations
+                                                </div>
+                                                <div class="col col-6">
+                                                    <b><t t-esc="ada_tx_history['amount']"/> ADA</b>
+                                                </div>
+                                            </div>
+                                            <div class="row payment-history-component--status">
+                                                <div class="col col-6">
+                                                    <div t-att-class="ada_tx_history['status']">
+                                                        <t t-esc="ada_tx_history['status']" />
+                                                    </div>
+                                                </div>
+                                                <div class="col col-6">
+                                                    <t t-esc="ada_tx_history['updateTime']"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </t>
                             </div>
                         </div>
                     </div>
