@@ -11,7 +11,7 @@ def lovelace_to_ada(amount):
 
 
 def ada_to_lovelace(amount):
-    return float(amount)*RATE
+    return int(amount)*RATE
 
 
 class AdaPayUrl(Enum):

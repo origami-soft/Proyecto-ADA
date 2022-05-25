@@ -18,7 +18,6 @@
             <input type="hidden" name='ada_amount' t-att-value='ada_amount'/>
             <input type="hidden" name='last_updated' t-att-value='last_updated'/>
             <input type="hidden" name='ada_currency' t-att-value='ada_currency'/>
-            <input type="hidden" name='provider' t-att-value='provider'/>
             <!-- AdaPay payment-request -->
             <input type="hidden" name='adapay_uuid' t-att-value='adapay_uuid'/>
             <input type="hidden" name='adapay_amount' t-att-value='adapay_amount'/>
@@ -39,14 +38,14 @@
         <template id="payment_adapay_page" name="Adapay processing page">
             <div class="payment-card-component">
                 <div class="payment-card-component__container--body">
-                    <div class="payment-page-component__container--title"><t t-raw="title"/></div>
+                    <p class="payment-page-component__container--title"><t t-esc="title"/></p>
                     <div class="payment-page-component__container--card-container">
                         <div class="card-component payment-page-component__container--card pending">
                                 <div class="payment-qr-component">
                                     <div class="payment-qr-component__container">
                                         <div class="payment-qr-component__container--header">
                                             <div class="payment-qr-component__container--header-total"><t t-esc="adapay_amount"/> ADA</div>
-                                            <t t-if="adapay_status=='new' or adapay_status=='pending'">
+                                            <t t-if="adapay_status=='new'">
                                                 <div class="countdown-timer-component">
                                                     <div class="countdown-timer-component__inner">
                                                         <p id="expiration_clock"></p>
@@ -55,17 +54,16 @@
                                             </t>
                                         </div>
                                     
-                                        <t t-if="adapay_status=='new' or adapay_status=='pending'">
+                                        <t t-if="adapay_status=='new'">
                                             <div class="payment-qr" height="200" width="200" style="height: 200px; width: 200px;">
                                                 <img t-att-src="qr_code" style="height: 200px; width: 200px;"/>
                                             </div>
                                             <div class="payment-qr-component__container--address">
                                                 <div class="payment-address-component">
-                                                    <div class="payment-address--title" id="payment-address--title"><t t-esc="page_terms['address']"/></div>
-                                                    <div content-editable="true" class="payment-address" id="payment-address-adapay">
-                                                        <input type="hidden" id="adapay-address-value" t-att-value="adapay_address" />
+                                                    <div class="payment-address--title">Address</div>
+                                                    <div content-editable="true" class="payment-address">
                                                         <t t-esc="adapay_address"/>
-                                                        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAYAAAAmlE46AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAALBJREFUeNpidHdzY0ACxUDcDsSsDLjBfyCew4ImmAnEsUC8E49GaSC+DNOoD8SCQHwFiJmA2ABN8VMgvo3EZwRpnAHEwVBJECjHYosSENcDcT9MAKQxBYg1gPgOHuf5A3EHskaQs5iB+A0DfvARiDmRBZgYyASjGrEDFjhBAtgMxNpAfIZUjbVAzAvEZ0EavwKxBRCfwKPBEIjfAvEFZPfmA/EqqEm4wHMgjkMWAAgwANM3GpISwCz8AAAAAElFTkSuQmCC" alt="copy" onclick="copyToClipboard()"/>
+                                                        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAYAAAAmlE46AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAALBJREFUeNpidHdzY0ACxUDcDsSsDLjBfyCew4ImmAnEsUC8E49GaSC+DNOoD8SCQHwFiJmA2ABN8VMgvo3EZwRpnAHEwVBJECjHYosSENcDcT9MAKQxBYg1gPgOHuf5A3EHskaQs5iB+A0DfvARiDmRBZgYyASjGrEDFjhBAtgMxNpAfIZUjbVAzAvEZ0EavwKxBRCfwKPBEIjfAvEFZPfmA/EqqEm4wHMgjkMWAAgwANM3GpISwCz8AAAAAElFTkSuQmCC" alt="copy"/>
                                                     </div>
                                                     
                                                 </div>
@@ -75,20 +73,20 @@
                                 </div>
                             <div class="payment-history-component">
                                 <div class="payment-history-component--row">
-                                    <h2 class="payment-history-component--row-title"><t t-esc="page_terms['confirmed']"/></h2>
+                                    <h2 class="payment-history-component--row-title">Total amount confirmed</h2>
                                     <b class="payment-history-component--row-amount"><t t-esc="adapay_total_amount_sent"/> ADA</b>
                                 </div>
                                 <div class="payment-history-component--row">
-                                    <h2 class="payment-history-component--row-title"><t t-esc="page_terms['left']"/></h2>
+                                    <h2 class="payment-history-component--row-title">Amount left to confirm</h2>
                                     <b class="payment-history-component--row-amount"><t t-esc="adapay_total_amount_left"/> ADA</b>
                                 </div>
                                 <t t-if="adapay_transaction_history">
-                                    <b><t t-esc="page_terms['history']"/></b>
+                                    <b> Transactions history</b>
                                     <t t-foreach="adapay_transaction_history" t-as="ada_tx_history">
                                         <div class="payment-transaction-history--row">
                                             <div class="row " style="font-size: small">
                                                 <div class="col col-6">
-                                                    <t t-esc="ada_tx_history['lastMonitoredDepth']" /> <t t-esc="page_terms['confirmations']"/>
+                                                    <t t-esc="ada_tx_history['lastMonitoredDepth']" /> of 15 confirmations
                                                 </div>
                                                 <div class="col col-6">
                                                     <b><t t-esc="ada_tx_history['amount']"/> ADA</b>
@@ -97,7 +95,7 @@
                                             <div class="row payment-history-component--status">
                                                 <div class="col col-6">
                                                     <div t-att-class="ada_tx_history['status']">
-                                                        <t t-esc="page_terms[ada_tx_history['status']]" />
+                                                        <t t-esc="ada_tx_history['status']" />
                                                     </div>
                                                 </div>
                                                 <div class="col col-6">

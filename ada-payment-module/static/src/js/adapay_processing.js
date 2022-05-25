@@ -10,27 +10,26 @@ odoo.define('ada-payment-module.processing', function(require) {
             this._super.apply(this, arguments);
             this._inProgressClock = false;
             this._expiredTime = false;
-            // Prevent updating the same block every time, ensure the first time
-            this.last_event = null;
+            this.pagePresent = false // Prevent updating the same block every time, ensure the first time
         },
         processPolledData: function(transactions) {
-            let tx = transactions[0]
-            if (!this.last_event || this.last_event < tx.last_event) { // Ensure the first page
+            this._super.apply(this, arguments);
+            if (!this.pagePresent) { // Ensure the first page
                 this._super.apply(this, arguments);
-                this.last_event = tx.last_event;
+                this.pagePresent = true
             }
-            if (!(tx.adapay_status === 'new')) {
+            if (!(transactions[0].adapay_status === 'new')) {
                 // On "new" status, we need to prevent the updating every time, but we need to update the first time
                 //this._super.apply(this, arguments);
             }
-            if (!tx.return_url) {
+            if (!transactions[0].return_url) {
                 this.$el.find("a").removeAttr("href")
             }
             if (!this._inProgressClock) {
-                if (tx.adapay_expiration_seconds) {
+                if (transactions[0].adapay_expiration_seconds) {
                     this._inProgressClock = true;
                     let now = new Date();
-                    this._expiredTime = now.getTime() + tx.adapay_expiration_seconds * 1000;
+                    this._expiredTime = now.getTime() + transactions[0].adapay_expiration_seconds * 1000;
 
                     var interval_id = setInterval(() => {
                         let now = new Date()

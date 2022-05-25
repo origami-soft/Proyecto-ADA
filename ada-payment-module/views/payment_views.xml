@@ -8,26 +8,18 @@
             <field name="arch" type="xml">
                 <xpath expr='//group[@name="acquirer"]' position='inside'>
                     <group attrs="{'invisible': [('provider', '!=', 'adapay')]}">
-                        <field name="adapay_api_key" attrs="{'required': [('provider', '=', 'adapay')]}"/>
-                        <field name="adapay_expiration_minutes" attrs="{'required': [('provider', '=', 'adapay')]}"/>
-                        <field name="adapay_use_webhook" attrs="{'required': [('provider', '=', 'adapay')]}"/>
+                        <field name="adapay_api_key" required="1"/>
+                        <field name="adapay_expiration_minutes" required="1"/>
+                        <field name="adapay_use_webhook" required="1"/>
                         <a colspan="2" href="https://docs.adapay.finance/docs/introduction/getting-started" target="_blank">Configure Ada Pay payment</a>
                     </group>
                 </xpath>
                 <xpath expr='//group[@name="payment_followup"]' position='after'>
                     <group string="Currency conversion providers" name="conversion_providers" attrs="{'invisible': [('provider', '!=', 'adapay')]}">
-                        <field name="conversion_provider" attrs="{'required': [('provider', '=', 'adapay')]}"/>
+                        <field name="conversion_provider" required="1"/>
                         <field name="conversion_test_mode"/>
-                        <field name="conversion_api_key" attrs="{'required': [('provider', '=', 'adapay')]}"/>
+                        <field name="conversion_api_key" required="1"/>
                     </group>
-                </xpath>
-                
-                <xpath expr='//field[@name="pending_msg"]' position='replace'>
-                    <field name="adapay_status_msg_new"/>
-                    <field name="adapay_status_msg_pending"/>
-                    <field name="adapay_status_msg_payment_sent"/>
-                    <field name="adapay_status_msg_confirmed"/>
-                    <field name="adapay_status_msg_expired"/>
                 </xpath>
             </field>
         </record>
