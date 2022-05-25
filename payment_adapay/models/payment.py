@@ -3,6 +3,7 @@ import logging
 import json
 
 from werkzeug import urls
+from string import Template
 
 import logging
 
@@ -23,6 +24,7 @@ from datetime import datetime, timedelta
 _logger = logging.getLogger(__name__)
 
 ADA = "ADA"
+ADA_DECIMAL = 2
 
 
 class AcquirerAdapay(models.Model):
@@ -33,7 +35,7 @@ class AcquirerAdapay(models.Model):
     ], ondelete={'adapay': 'set default'})
     adapay_api_key = fields.Char("AdaPay APIKEY")
     adapay_expiration_minutes = fields.Integer("Payment request expiration (minutes)", default=15)
-    adapay_use_webhook = fields.Boolean("Use WebHook",  # TODO: default False, move to configuration section
+    adapay_use_webhook = fields.Boolean("Use WebHook",
         default=False,
         help="Disable update via webhook and do it via cron.")
     conversion_provider = fields.Selection([
@@ -42,6 +44,14 @@ class AcquirerAdapay(models.Model):
         default=COINMARKET_PROVIDER, required=True)
     conversion_api_key = fields.Char("Api-Key")
     conversion_test_mode = fields.Boolean("Test Mode", default=False)
+    adapay_status_msg_new = fields.Html("AdaPay New", translate=True, help="Payment request was created.")
+    adapay_status_msg_pending = fields.Html("AdaPay Pending", translate=True, help="Some transactions started but transactions are still left.")
+    adapay_status_msg_payment_sent = fields.Html("AdaPay payment sent", translate=True, help="Transactions amount are completed.")
+    adapay_status_msg_confirmed = fields.Html("AdaPay Confirmed", translate=True, help="Payment confirmed.")
+    adapay_status_msg_expired = fields.Html("Adapay expired", translate=True, help="There were no transactions in the time period.")
+
+    def _adapay_get_msg_by_status(self, status):
+        return getattr(self, f"adapay_status_msg_{status.replace('-', '_')}")
 
     def _get_conversion_provider(self, data):
         return get_conversion_provider(**data)
@@ -61,15 +71,16 @@ class AcquirerAdapay(models.Model):
                 convert_currency=ADA,
             )
             adapay_amount = {
-                "ada_amount": int(resp["price"]),
+                "ada_amount": float(format(resp['price'], f'.{ADA_DECIMAL}f')),
                 "last_updated": resp["last_updated"],
                 "ada_currency": ADA,
+                "provider": self.conversion_provider,
             }
             _logger.info(f"{self.conversion_provider}: {values['amount']} {values['currency'].name} -> {resp['price']} {ADA}. Last updated: {resp['last_updated']}")
             values.update(adapay_amount)
         except Exception as err:
             _logger.error("Conversion error: %s", err)
-            raise ValidationError("We cannot get the ADA currency rate. Please try again.")
+            raise ValidationError(_("We cannot get the ADA currency rate. Please try again."))
         # Perform adapay payment requests
         try:
             sandbox = self.state == "test"
@@ -87,7 +98,7 @@ class AcquirerAdapay(models.Model):
             values.update(payment_data)
             values["adapay_expiration_minutes"] = self.adapay_expiration_minutes
         except Exception:
-            raise ValidationError("We cannot create the AdaPay payment request. Please try again.")
+            raise ValidationError(_("We cannot create the AdaPay payment request. Please try again."))
         return values
 
     def adapay_get_form_action_url(self):
@@ -110,6 +121,7 @@ class TransactionAdapay(models.Model):
     adapay_substatus = fields.Char("Payment sub-status", default="")
     adapay_address = fields.Char("Payment address")
     adapay_transaction_history = fields.Text("Transaction history", default='{}')
+    adapay_last_event = fields.Datetime("Last event")
 
     @api.model
     def _adapay_form_get_tx_from_data(self, data, field="reference"):
@@ -125,23 +137,28 @@ class TransactionAdapay(models.Model):
             raise ValidationError(error_msg)
         return tx
 
-    def _adapay_form_get_invalid_parameters(self, data):
-        invalid_parameters = []
-        # TODO: restore validation
-        # if float_compare(float(data.get('amount') or '0.0'), self.amount, 2) != 0:
-        #    invalid_parameters.append(('amount', data.get('amount'), '%.2f' % self.amount))
-        if data.get('currency') != self.currency_id.name:
-            invalid_parameters.append(('currency', data.get('currency'), self.currency_id.name))
-        return invalid_parameters
-
     def _adapay_form_validate(self, data):
         _logger.info('Validated adapay payment for tx %s: set as pending' % (self.reference))
         data["adapay_amount"] = lovelace_to_ada(data["adapay_amount"])
         # Update tx `adapay_` fields
         adapay_data = {key: value for key, value in data.items() if key.startswith("adapay_")}
         self.write(adapay_data)
+        self.adapay_last_event = datetime.now()
         for sale in self.sale_order_ids:
-            sale.message_post(body=f"AdaPay payment request created with data: {adapay_data}")
+            # TODO: Add 1 ADA -> currency value 
+            CONVERSION_MSG = Template(_("""Currency converted via $provider: $amount $currency -> 
+                                        $ada_amount ADA. Last updated: $last_updated"""))
+            sale.message_post(body=CONVERSION_MSG.safe_substitute(data))
+            PAYMENT_CREATED_MSG = Template(_("""AdaPay payment request created:<br>
+                Payment reference: $reference
+                <ul>
+                <li>uuid: $adapay_uuid</li>
+                <li>amount: $adapay_amount ADA</li>
+                <li>expiration: $adapay_expiration_date</li>
+                <li>address: $adapay_address</li>
+                </ul>
+                """))
+            sale.message_post(body=PAYMENT_CREATED_MSG.safe_substitute(adapay_data, reference=self.reference))
         self._set_transaction_pending()
         return True
 
@@ -156,13 +173,6 @@ class TransactionAdapay(models.Model):
     def _get_processing_info(self):
         qr_encoded = generate_b64_qr_image(self.adapay_address)
         res = super()._get_processing_info()
-        title = {  # TODO: add as attribute
-            "new": "To complete your payment, please send ADA to the address below.",
-            "payment-sent": "Your payment was received! You payment is pending for confirmation.",
-            "pending": "The transaction is in the process of being confirmed.",
-            "confirmed": "The transaction is confirmed!",
-            "expired": "The payment request is expired. Please back to payment selection."
-        }
         if self.acquirer_id.provider == 'adapay':
             # Update status
             if not self.acquirer_id.adapay_use_webhook:
@@ -176,7 +186,7 @@ class TransactionAdapay(models.Model):
                     _logger.warning("Could not update payment status: %s", err)
             # Render AdaPay payment pages
             exp_time = 0
-            if self.adapay_status == 'new':  # Timer, set expiration from backend
+            if self.adapay_status in ['new', 'pending']:  # Timer, set expiration from backend
                 now = datetime.now()
                 expiration = self.create_date + timedelta(minutes=self.adapay_expiration_minutes)
                 if now > expiration:
@@ -186,11 +196,22 @@ class TransactionAdapay(models.Model):
             transaction_adapay_data = {field:getattr(self, field) for field in self._fields.keys() if field.startswith("adapay")}
             transaction_adapay_data['qr_code'] = f"data:image/png;base64,{qr_encoded}"
             transaction_adapay_data['adapay_transaction_history'] = list(json.loads(self.adapay_transaction_history).values())
-            transaction_adapay_data['title'] = title[self.adapay_status]
-            payment_frame = self.env.ref("ada-payment-module.payment_adapay_page")._render(transaction_adapay_data, engine="ir.qweb")
+            transaction_adapay_data['title'] = self.acquirer_id._adapay_get_msg_by_status(self.adapay_status)
+            # Terms
+            transaction_adapay_data["page_terms"] = {
+                "address": _("Address"),
+                "confirmed": _("Total amount confirmed"),
+                "left": _("Amount left to confirm"),
+                "history": _("Transactions history"),
+                "confirmations":_("of 15 confirmations"),
+                "pending": _("pending"),
+                "confirmed": _("confirmed")
+            }
+            payment_frame = self.env.ref("payment_adapay.payment_adapay_page")._render(transaction_adapay_data, engine="ir.qweb")
             adapay_info = {
                 "message_to_display": payment_frame,
                 "adapay_expiration_seconds": exp_time,
+                "last_event": self.adapay_last_event,  # Must update the UI
             }
             if self.adapay_status != "confirmed":  # Prevent confirmation page if payment was not started
                 adapay_info["return_url"] = ""
@@ -233,8 +254,37 @@ class TransactionAdapay(models.Model):
             "adapay_status": status,
             "adapay_substatus": data["subStatus"],
         })
+        self.adapay_last_event = datetime.now()
+        PAYMENT_UPDATE_TRANSACTIONS_MSG = Template(_("""
+            <ul>
+                <li>hash: $hash</li>
+                <li>amount: $amount</li>
+                <li>status: $status</li>
+                <li>confirmed: $lastMonitoredDepth / 15</li>
+            </ul><br>
+            """))
+        PAYMENT_UPDATE_MSG = Template(_("""Adapay payment update:<br>
+            Payment reference: $orderId<br>
+            uuid: $uuid
+            <ul>
+            <li>status: $status</li>
+            <li>substatus: $subStatus</li>
+            <li>amount: $amount</li>
+            <li>address: $address</li>
+            <li>pending: $pendingAmount</li>
+            <li>updated: $updateTime</li>
+            <li>expiration: $expirationDate</li>
+            $transactions_msg
+            </ul>
+            """))
         for sale in self.sale_order_ids:
-            sale.message_post(body=f"AdaPay payment update with data: {data}")
+            transactions_history = data.get("transactions")
+            transactions_msg = ""
+            if transactions_history:
+                transactions_msg = "<li>transactions</li>"
+                for transaction_data in transactions_history:
+                    transactions_msg = f"{transactions_msg}{PAYMENT_UPDATE_TRANSACTIONS_MSG.safe_substitute(transaction_data)}"
+            sale.message_post(body=PAYMENT_UPDATE_MSG.safe_substitute(data, transactions_msg=transactions_msg))
         if status == "confirmed":
             if self.state != "done":
                 self._set_transaction_done()
@@ -243,6 +293,7 @@ class TransactionAdapay(models.Model):
                 self._set_transaction_pending()
         else:
             if self.state != "cancel":
+                self.state = "draft"  # Reset the payment flow to be canceled.
                 self._set_transaction_cancel()
         return True
 
@@ -255,17 +306,28 @@ class TransactionAdapay(models.Model):
         transaction_hash = data["hash"]
         if transaction_hash not in transaction_history or \
                 data["updateTime"] != transaction_history[transaction_hash]["updateTime"]:
+            self.adapay_last_event = datetime.now()
             data["amount"] = lovelace_to_ada(data["amount"])
             transaction_history[transaction_hash] = data
             self.adapay_transaction_history = json.dumps(transaction_history)
             # Update data
+            TRANSACTION_UPDATE_MSG = Template(_("""Transaction update:<br>
+                <ul>
+                    <li>uuid: $paymentRequestUuid</li>
+                    <li>hash: $hash</li>
+                    <li>amount: $amount</li>
+                    <li>status: $status</li>
+                    <li>confirmed: $lastMonitoredDepth / 15</li>
+                    <li>updated: $updateTime</li>
+                </ul>
+                """))
             for sale in self.sale_order_ids:
-                sale.message_post(body=f"AdaPay transaction update with data: {data}")
+                sale.message_post(body=TRANSACTION_UPDATE_MSG.safe_substitute(data))
         return True
 
     def _adapay_update_payment_schedule(self):
         _logger.info("Starting AdaPay payments synchronization")
-        adapay_acquirer = self.env.ref("ada-payment-module.payment_acquirer_adapay")
+        adapay_acquirer = self.env.ref("payment_adapay.payment_acquirer_adapay")
         if not adapay_acquirer.adapay_use_webhook:
             adapay_conn = adapay_acquirer._get_adapay_api_connector()
             payments_data = adapay_conn.get_payment()  #TODO: Get the last payments
